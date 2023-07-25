@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -34,6 +34,8 @@ onAuthStateChanged(auth, (user) => {
         localStorage.setItem("uid", uid)
         // ...
     } else {
+        let loc = window.location.href
+        window.location = loc.slice(0, loc.indexOf("todo.html"))
         // User is signed out
         // ...
     }
@@ -66,16 +68,43 @@ async function addTodos() {
     } catch (e) {
         alert(e);
     }
+    setTimeout(() => {
+        displayTodos()
+    }, 1000);
 }
 
 async function displayTodos() {
-    taskDisplay.innerHTML = null
     const querySnapshot = await getDocs(collection(db, localStorage.getItem("uid")));
+    taskDisplay.innerHTML = null
     querySnapshot.forEach((doc) => {
-        let todo = `<div>${doc.data().todo}</div>`
+        let time = doc.data().time.seconds
+        time = new Date(time)
+        let todo = `<div class="border-bottom row d-flex align-items-center py-2 px-3" id="${doc.id}">
+                    <div class="my-0 col-9 p-2">${doc.data().todo}</div>
+                    <div class="my-0 col-2 p-2">${time.toDateString() + " Time:" + time.toLocaleTimeString()}</div>
+                    <div class="col-1 justify-content-center"><button type="button" class="btn-close bg-danger p-2 remTask" aria-label="Close"></button></div>
+                </div>`
         taskDisplay.innerHTML += todo
     })
+    let closeBtns = document.getElementsByClassName("remTask")
+    Array.from(closeBtns).forEach((ele) => {
+        ele.addEventListener("click", () => {
+            removeTask(ele)
+        })
+    })
 }
+
 setTimeout(() => {
     displayTodos()
 }, 3000);
+
+
+async function removeTask(self) {
+    self = self.parentNode.parentNode
+    let removeID = self.id
+    self.remove()
+    await deleteDoc(doc(db, localStorage.getItem("uid"), removeID));
+    setTimeout(() => {
+        displayTodos()
+    }, 1000);
+}
